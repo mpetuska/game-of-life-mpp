@@ -1,7 +1,5 @@
-.idea/
+/build/
+/.gradle/
+/.idea/
+local.properties
 *.iml
-*.iws
-*.ipr
-
-build/
-.gradle/

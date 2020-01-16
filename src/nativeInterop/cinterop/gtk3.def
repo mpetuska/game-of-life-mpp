@@ -1,0 +1,4 @@
+headers = gtk/gtk.h
+package = gtk
+linkerOpts.mingw_x64 = -mwindows
+linkerOpts.linux_x64 = -L/usr/lib

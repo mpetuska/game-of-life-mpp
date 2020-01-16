@@ -1,111 +1,237 @@
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsSetupTask
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.ByteArrayOutputStream
 
 plugins {
-    kotlin("multiplatform") version "1.3.50"
-    idea
+  kotlin("multiplatform")
+  idea
 }
 
 group = "lt.petuska"
-version = "1.0.0-SNAPSHOT"
+version = "1.0-SNAPSHOT"
 
 repositories {
-    mavenCentral()
-    jcenter()
-    maven {
-        url = uri("https://kotlin.bintray.com/kotlin-js-wrappers")
-    }
+  mavenLocal()
+  jcenter()
+  mavenCentral()
+  maven { url = uri("https://kotlin.bintray.com/kotlin-js-wrappers") }
+  maven { url = uri("https://dl.bintray.com/kotlin/kotlinx.html") }
 }
 
 idea {
-    module {
-        isDownloadSources = true
-        isDownloadJavadoc = true
-    }
+  module {
+    isDownloadJavadoc = true
+    isDownloadSources = true
+  }
 }
 
-val isProductionBuild = project.hasProperty("prod") || project.hasProperty("production")
+object Versions {
+  const val coroutines = "1.3.3-native-mt"
+  const val kvdom = "0.0.2-SNAPSHOT"
+  const val tornadofx = "1.7.19"
+  const val redux = "0.3.1"
+}
+
+val os = org.gradle.internal.os.OperatingSystem.current()!!
 kotlin {
-    targets {
-        jvm {
-            compilations.all {
-                kotlinOptions {
-                    jvmTarget = "1.8"
-                }
-            }
-        }
-        js {
-            useCommonJs()
-            browser {
-                webpackTask {
-                    runTask {
-                        devServer = KotlinWebpackConfig.DevServer(
-                            inline = true,
-                            lazy = false,
-                            noInfo = true,
-                            open = true,
-                            overlay = false,
-                            port = 3000,
-                            proxy = mapOf("/api" to "http://0.0.0.0:8080"),
-                            contentBase = listOf(
-                                "${(tasks["jsProcessResources"] as Copy).destinationDir}"
-                            )
-                        )
-                    }
-                }
-            }
-        }
+  /* Targets configuration omitted.
+  *  To find out how to configure the targets, please follow the link:
+  *  https://kotlinlang.org/docs/reference/building-mpp-with-gradle.html#setting-up-targets */
+  targets {
+    metadata {
+      sourceSets.create("browserMain")
     }
+    jvm {
+      compilations.all {
+        kotlinOptions {
+          jvmTarget = "1.8"
+        }
+      }
+    }
+    js {
+      browser {
+        runTask {
+          devServer = devServer?.copy(
+            inline = false,
+            lazy = false,
+            noInfo = true,
+            open = false,
+            overlay = true,
+            port = 3000
+          )
+        }
+      }
+    }
+    js("react") {
+      browser {
+        runTask {
+          devServer = devServer?.copy(
+            inline = false,
+            lazy = false,
+            noInfo = true,
+            open = false,
+            overlay = true,
+            port = 3000
+          )
+        }
+      }
+    }
+    wasm32 {
+      binaries {
+        executable {
+          entryPoint = "lt.petuska.gol.main"
+        }
+      }
+    }
+    when {
+      os.isLinux -> linuxX64("desktop")
+      os.isWindows -> mingwX64("desktop")
+      else -> null
+    }?.apply {
+      compilations["main"].apply {
+        cinterops {
+          create("gtk3") {
+            execAndCapture("pkg-config --cflags gtk+-3.0")?.let {
+              compilerOpts(*it)
+              println("Compiler Opts: $compilerOpts")
+            }
+          }
+        }
+      }
+      binaries {
+        executable {
+          entryPoint = "lt.petuska.gol.main"
+          execAndCapture("pkg-config --libs gtk+-3.0")?.let {
+            linkerOpts(*it)
+            println("Linker Opts: $linkerOpts")
+          }
+        }
+      }
+    }
+    
     sourceSets {
-        getByName("commonMain") {
-            dependencies {
-                implementation(kotlin("stdlib-common"))
-                implementation("org.reduxkotlin:redux-kotlin:0.2.6")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:1.3.1")
-                implementation("com.soywiz.korlibs.klock:klock:1.6.0")
-            }
+      val commonMain by getting {
+        dependencies {
+          implementation(kotlin("stdlib-common"))
+          implementation("org.reduxkotlin:redux-kotlin:${Versions.redux}")
         }
-        getByName("jvmMain") {
-            dependencies {
-                implementation(kotlin("stdlib"))
-                implementation("no.tornado:tornadofx:1.7.17")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.1")
-            }
+      }
+      val browserMain by getting {
+        dependsOn(commonMain)
+        dependencies {
+          implementation("lt.petuska:kvdom:${Versions.kvdom}")
         }
-        getByName("jsMain") {
-            dependencies {
-                implementation(kotlin("stdlib-js"))
-                implementation("org.jetbrains:kotlin-react:16.9.0-pre.83-kotlin-1.3.50")
-                implementation("org.jetbrains:kotlin-react-dom:16.9.0-pre.83-kotlin-1.3.50")
-                implementation("org.jetbrains:kotlin-styled:1.0.0-pre.83-kotlin-1.3.50")
-                implementation(npm("core-js"))
-                implementation(npm("styled-components"))
-                implementation(npm("inline-style-prefixer"))
-                implementation(npm("react"))
-                implementation(npm("react-dom"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.3.1")
-            }
+      }
+      val jsMain by getting {
+        dependsOn(browserMain)
+        dependencies {
+          implementation("org.reduxkotlin:redux-kotlin-js:${Versions.redux}")
         }
+      }
+      val wasm32Main by getting {
+        dependsOn(browserMain)
+        dependencies {
+          implementation("org.reduxkotlin:redux-kotlin-wasm:${Versions.redux}")
+        }
+      }
+      val reactMain by getting {
+        dependencies {
+          implementation("org.jetbrains:kotlin-react:16.9.0-pre.89-kotlin-1.3.60")
+          implementation("org.jetbrains:kotlin-react-dom:16.9.0-pre.89-kotlin-1.3.60")
+          implementation("org.jetbrains:kotlin-styled:1.0.0-pre.89-kotlin-1.3.60")
+          implementation(npm("core-js"))
+          implementation(npm("react"))
+          implementation(npm("react-dom"))
+          implementation(npm("react-dom"))
+          implementation(npm("styled-components"))
+          implementation(npm("inline-style-prefixer"))
+        }
+      }
+      val jvmMain by getting {
+        dependencies {
+          implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
+          implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:${Versions.coroutines}")
+          implementation("no.tornado:tornadofx:${Versions.tornadofx}")
+        }
+      }
+      val desktopMain by getting {
+        dependsOn(commonMain)
+        dependencies {
+          implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:${Versions.coroutines}")
+        }
+      }
     }
+  }
 }
 
 tasks {
-    wrapper {
-        gradleVersion = "5.6.1"
+  withType<KotlinCompile> {
+    kotlinOptions {
+      jvmTarget = "1.8"
     }
-    withType<Kotlin2JsCompile> {
-        kotlinOptions {
-            moduleKind = "commonjs"
-            sourceMap = !isProductionBuild
-            metaInfo = true
-            sourceMapEmbedSources = "always"
-        }
+  }
+  val wrapper by getting(Wrapper::class) {
+    gradleVersion = "6.0.1"
+  }
+}
+
+afterEvaluate {
+  tasks {
+    val compileKotlinJvm by getting(KotlinCompile::class)
+    val jvmProcessResources by getting(Copy::class)
+    val jvmRun by creating(JavaExec::class) {
+      dependsOn(compileKotlinJvm)
+      group = "run"
+      main = "lt.petuska.gol.IndexKt"
+      classpath = configurations["jvmRuntimeClasspath"] + compileKotlinJvm.outputs.files +
+          jvmProcessResources.outputs.files
+      workingDir = buildDir
     }
-    val jsBrowserWebpack by getting(KotlinWebpack::class) {
-        inputs.property("isProductionBuild", isProductionBuild)
+    val jsBrowserRun by getting(KotlinWebpack::class) {
+      group = "run"
+      doFirst {
+        println("Starting webpack-devServer")
+        println("Avialable on: http://localhost:3000")
+      }
     }
-    val jsProcessResources by getting(ProcessResources::class) {
-        expand(project.properties)
+    val reactBrowserRun by getting(KotlinWebpack::class) {
+      group = "run"
+      doFirst {
+        println("Starting webpack-devServer")
+        println("Avialable on: http://localhost:3000")
+      }
     }
+    val kotlinNodeJsSetup by getting(NodeJsSetupTask::class)
+    val wasm32ProcessResources by getting(Copy::class)
+    val linkReleaseExecutableWasm32 by getting(org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink::class)
+    val wasmBundle by creating(Copy::class) {
+      group = "build"
+      dependsOn(wasm32ProcessResources, linkReleaseExecutableWasm32)
+      from(linkReleaseExecutableWasm32.destinationDir)
+      from(wasm32ProcessResources.destinationDir)
+      destinationDir = file("$buildDir/bundle/wasm")
+      inputs.files(wasm32ProcessResources.outputs, linkReleaseExecutableWasm32.outputs)
+    }
+    val wasmBrowserRun by creating(Exec::class) {
+      dependsOn(wasmBundle, kotlinNodeJsSetup)
+      group = "run"
+      println(kotlinNodeJsSetup.destination)
+      executable = "http-server"
+      workingDir = wasmBundle.destinationDir
+      args("${wasmBundle.destinationDir}", "-c-1")
+    }
+    val assemble by getting {
+      dependsOn(wasmBundle)
+    }
+  }
+}
+
+fun execAndCapture(cmd: String): Array<String>? = ByteArrayOutputStream().use { stream ->
+  exec {
+    commandLine(*cmd.split(" ").toTypedArray())
+    standardOutput = stream
+  }.takeIf { it.exitValue == 0 }?.let {
+    stream.toString().trim().split(" ").map(String::trim).toTypedArray()
+  }
 }
