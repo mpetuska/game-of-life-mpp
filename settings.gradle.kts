@@ -1,15 +1,18 @@
 pluginManagement {
-    repositories {
-        gradlePluginPortal()
-    }
     resolutionStrategy {
         eachPlugin {
             when (requested.id.id) {
-                //Workaround, because kotlin-dce-js plugin not available by id on gradlePluginPortal
-                "kotlin-dce-js" -> useModule("org.jetbrains.kotlin:kotlin-gradle-plugin:${requested.version}")
+                "com.android.library",
+                "com.android.application" -> useModule("com.android.tools.build:gradle:3.5.2")
+                "org.jetbrains.kotlin.multiplatform",
+                "kotlin-android-extensions" -> useModule("org.jetbrains.kotlin:kotlin-gradle-plugin:1.3.61")
             }
         }
     }
-}
 
-rootProject.name = "game-of-life-mpp"
+    repositories {
+        gradlePluginPortal()
+        google()
+        jcenter()
+    }
+}
