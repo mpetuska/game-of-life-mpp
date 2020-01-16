@@ -19,5 +19,3 @@ Make sure you have JDK8 installed as your default JDK and run `./gradlew jvmRun`
 ### Desktop (GTK3)
 * Linux: Install GTK3 toolchain from [here](https://www.gtk.org/download/linux.php) and `pkg-config` package and run `./gradlew runReleaseExecutableDesktop`
 * Windows: Install GTK3 toolchain from [here](https://www.gtk.org/download/windows.php) via [MSYS2](https://www.msys2.org/) and `pkg-config` package and run `./gradlew runReleaseExecutableDesktop`
-
- 
