@@ -7,7 +7,7 @@ This projects outlines a sample architecture and usage of kotlin MPP for code sh
 * JVM (with TornadoFX)
 * Native/Desktop for Linux & Windows (with GTK3)
 
-##Running
+## Running
 ### Browser
 * JS (React): No extra setup required, just run `./gradlew reactBrowserRun`
 * JS(KVDOM): Install KVDOM library to local maven cache and run `./gradlew jsBrowserRun`
