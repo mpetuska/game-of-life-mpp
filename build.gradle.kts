@@ -17,6 +17,7 @@ repositories {
   mavenCentral()
   maven { url = uri("https://kotlin.bintray.com/kotlin-js-wrappers") }
   maven { url = uri("https://dl.bintray.com/kotlin/kotlinx.html") }
+  maven { url = uri("https://dl.bintray.com/mpetuska/lt.petuska") }
 }
 
 idea {
@@ -28,7 +29,7 @@ idea {
 
 object Versions {
   const val coroutines = "1.3.3-native-mt"
-  const val kvdom = "0.0.2-SNAPSHOT"
+  const val kvdom = "0.0.2"
   const val tornadofx = "1.7.19"
   const val redux = "0.3.1"
 }
@@ -228,10 +229,14 @@ afterEvaluate {
 }
 
 fun execAndCapture(cmd: String): Array<String>? = ByteArrayOutputStream().use { stream ->
-  exec {
-    commandLine(*cmd.split(" ").toTypedArray())
-    standardOutput = stream
-  }.takeIf { it.exitValue == 0 }?.let {
-    stream.toString().trim().split(" ").map(String::trim).toTypedArray()
+  try {
+    exec {
+      commandLine(*cmd.split(" ").toTypedArray())
+      standardOutput = stream
+    }.takeIf { it.exitValue == 0 }?.let {
+      stream.toString().trim().split(" ").map(String::trim).toTypedArray()
+    }
+  } catch (e: Exception) {
+    null
   }
 }

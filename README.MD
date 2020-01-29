@@ -2,7 +2,7 @@
 
 This projects outlines a sample architecture and usage of kotlin MPP for code sharing (via MPP architecture).
 ## Implemented Platforms
-* JS/WASM (via shared browser UI library, requires local installation of [KVDOM](https://gitlab.com/lt.petuska/kvdom/tree/feature/rework))
+* JS/WASM (with shared browser UI library [KVDOM](https://gitlab.com/lt.petuska/kvdom))
 * JS (with React)
 * JVM (with TornadoFX)
 * Native/Desktop for Linux & Windows (with GTK3)
@@ -10,8 +10,8 @@ This projects outlines a sample architecture and usage of kotlin MPP for code sh
 ## Running
 ### Browser
 * JS (React): No extra setup required, just run `./gradlew reactBrowserRun`
-* JS(KVDOM): Install KVDOM library to local maven cache and run `./gradlew jsBrowserRun`
-* WASM (KVDOM): Install KVDOM library to local maven cache, install `http-server` globally via npm and run `./gradlew wasmBrowserRun`
+* JS(KVDOM): No extra setup required, just run `./gradlew jsBrowserRun`
+* WASM (KVDOM): Install `http-server` globally via npm and run `./gradlew wasmBrowserRun`
 
 ### JVM (TornadoFX)
 Make sure you have JDK8 installed as your default JDK and run `./gradlew jvmRun`
